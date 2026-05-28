@@ -4,6 +4,7 @@ import { registerSchema, RegisterInput, updateSchema, UpdateInput } from '../val
 import { env } from '../config/env';
 import { getUser, setUser, invalidateUser } from '../cache/user.cache';
 import { AppError } from '../middleware/errorHandler';
+import { logger } from '../config/logger';
 
 export class UserService {
   static async register(input: RegisterInput): Promise<Record<string, unknown>> {
@@ -79,5 +80,30 @@ export class UserService {
     }
 
     await invalidateUser(id);
+  }
+
+  // ── Internal (T042) ──────────────────────────────────────────────────────────
+
+  /**
+   * Verify email + password for the internal Auth Service credential endpoint.
+   * Uses bcrypt constant-time compare. Always throws the same AppError 401 on
+   * failure to prevent user enumeration.
+   */
+  static async verifyCredentials(
+    email: string,
+    password: string,
+  ): Promise<{ id: string; email: string }> {
+    const user = await User.findOne({ email: email.toLowerCase() });
+    console.log(user);
+    // Always run bcrypt.compare even for unknown email to prevent timing attacks
+    const dummyHash = '$2b$10$abcdefghijklmnopqrstuvuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu';
+    const hash = user ? user.passwordHash : dummyHash;
+    const valid = await bcrypt.compare(password, hash);
+
+    if (!user || !valid) {
+      throw new AppError(401, 'Invalid credentials');
+    }
+
+    return { id: user._id.toString(), email: user.email };
   }
 }

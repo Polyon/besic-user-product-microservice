@@ -476,3 +476,90 @@ describe('DELETE /api/users/:id — Delete Own Account', () => {
     expect(res.status).toBe(400);
   });
 });
+
+// ── POST /api/internal/verify-credentials (T041) ────────────────────────────
+
+describe('POST /api/internal/verify-credentials', () => {
+  const INTERNAL_API_KEY = 'test-internal-api-key';
+  const validPayload = { email: 'jane@example.com', password: 'secureP@ssw0rd' };
+
+  beforeEach(async () => {
+    process.env['INTERNAL_API_KEY'] = INTERNAL_API_KEY;
+    await request(app).post('/api/users').send({
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      password: 'secureP@ssw0rd',
+    });
+  });
+
+  it('200 — returns { id, email } for valid key and correct credentials', async () => {
+    const res = await request(app)
+      .post('/api/internal/verify-credentials')
+      .set('X-Internal-Api-Key', INTERNAL_API_KEY)
+      .send(validPayload);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: expect.any(String),
+      email: 'jane@example.com',
+    });
+    expect(res.body).not.toHaveProperty('passwordHash');
+  });
+
+  it('401 — wrong password returns generic invalid_credentials', async () => {
+    const res = await request(app)
+      .post('/api/internal/verify-credentials')
+      .set('X-Internal-Api-Key', INTERNAL_API_KEY)
+      .send({ email: 'jane@example.com', password: 'wrongpassword' });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toMatchObject({ error: 'Invalid credentials' });
+  });
+
+  it('401 — unknown email returns generic invalid_credentials (no enumeration)', async () => {
+    const res = await request(app)
+      .post('/api/internal/verify-credentials')
+      .set('X-Internal-Api-Key', INTERNAL_API_KEY)
+      .send({ email: 'nobody@example.com', password: 'secureP@ssw0rd' });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toMatchObject({ error: 'Invalid credentials' });
+  });
+
+  it('401 — missing X-Internal-Api-Key header', async () => {
+    const res = await request(app)
+      .post('/api/internal/verify-credentials')
+      .send(validPayload);
+
+    expect(res.status).toBe(401);
+    expect(res.body).toMatchObject({ error: 'Unauthorised' });
+  });
+
+  it('401 — wrong API key', async () => {
+    const res = await request(app)
+      .post('/api/internal/verify-credentials')
+      .set('X-Internal-Api-Key', 'not-the-right-key')
+      .send(validPayload);
+
+    expect(res.status).toBe(401);
+    expect(res.body).toMatchObject({ error: 'Unauthorised' });
+  });
+
+  it('400 — missing email field', async () => {
+    const res = await request(app)
+      .post('/api/internal/verify-credentials')
+      .set('X-Internal-Api-Key', INTERNAL_API_KEY)
+      .send({ password: 'secureP@ssw0rd' });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('400 — missing password field', async () => {
+    const res = await request(app)
+      .post('/api/internal/verify-credentials')
+      .set('X-Internal-Api-Key', INTERNAL_API_KEY)
+      .send({ email: 'jane@example.com' });
+
+    expect(res.status).toBe(400);
+  });
+});

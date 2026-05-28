@@ -202,3 +202,41 @@ describe('UserService.delete', () => {
   });
 });
 
+// ── verifyCredentials (T040) ────────────────────────────────────────────────
+
+describe('UserService.verifyCredentials', () => {
+  const base = { name: 'Jane Doe', email: 'jane@example.com', password: 'secureP@ssw0rd' };
+
+  beforeEach(async () => {
+    await UserService.register(base);
+  });
+
+  it('returns { id, email } for correct credentials', async () => {
+    const result = await UserService.verifyCredentials('jane@example.com', 'secureP@ssw0rd');
+
+    expect(result).toMatchObject({
+      id: expect.any(String),
+      email: 'jane@example.com',
+    });
+    expect(result).not.toHaveProperty('passwordHash');
+  });
+
+  it('throws AppError 401 for wrong password', async () => {
+    await expect(
+      UserService.verifyCredentials('jane@example.com', 'wrongpassword'),
+    ).rejects.toMatchObject({ statusCode: 401, message: 'Invalid credentials' });
+  });
+
+  it('throws AppError 401 for unknown email (same error type — no enumeration)', async () => {
+    await expect(
+      UserService.verifyCredentials('nobody@example.com', 'secureP@ssw0rd'),
+    ).rejects.toMatchObject({ statusCode: 401, message: 'Invalid credentials' });
+  });
+
+  it('email lookup is case-insensitive', async () => {
+    const result = await UserService.verifyCredentials('JANE@EXAMPLE.COM', 'secureP@ssw0rd');
+
+    expect(result.email).toBe('jane@example.com');
+  });
+});
+

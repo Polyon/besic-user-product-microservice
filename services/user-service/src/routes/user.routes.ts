@@ -5,6 +5,7 @@ import { publicRateLimiter } from '../middleware/rateLimiter';
 import { authMiddleware } from '../middleware/auth';
 import { UserService } from '../services/user.service';
 import { AppError } from '../middleware/errorHandler';
+import { logger } from '../config/logger';
 
 const router = Router();
 

@@ -25,6 +25,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   LOG_LEVEL: z.string().default('info'),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
+  INTERNAL_API_KEY: z.string().min(1, 'INTERNAL_API_KEY is required'),
 });
 
 const parsed = envSchema.safeParse(process.env);
