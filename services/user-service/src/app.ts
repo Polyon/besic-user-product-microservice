@@ -5,6 +5,7 @@ import { env } from './config/env';
 import { logger } from './config/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { userRouter } from './routes/user.routes';
+import { internalRouter } from './routes/internal.routes';
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/users', userRouter);
+app.use('/api/internal', internalRouter);
 
 // Global error handler — MUST be last middleware
 app.use(errorHandler);
